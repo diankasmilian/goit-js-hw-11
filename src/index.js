@@ -15,6 +15,8 @@ const loadMoreBtn = new LoadMoreBtn({
   isHidden: true,
 });
 
+
+
 refs.form.addEventListener('submit', onSubmitForm);
 loadMoreBtn.btn.addEventListener('click', onLoadMore);
 
@@ -23,15 +25,18 @@ async function onSubmitForm(e) {
   const form = e.currentTarget;
   const value = form.elements.searchQuery.value.trim();
 
-  if (value === "") Notiflix.Notify.failure('No query!');
-  else {
+  if (value === "") {
+    Notiflix.Notify.failure('No query!');
+    return
+  }
+    loadMoreBtn.hide();
     imageService.searchQuery = value;
     imageService.resetPage();
-    loadMoreBtn.show();
     clearMarkup();
-    onLoadMore();
+    await getImage();
+
   }
-}
+
 
 function createMarkup({
   webformatURL,
@@ -79,35 +84,51 @@ function clearMarkup() {
 }
 async function onLoadMore() {
   loadMoreBtn.disable();
+  await getImage();
   await loadMoreBtn.enable();
-
-  return getImage();
 }
 
 
 async function getImage() {
   try {
-   const search = await imageService.searchImage();
+    const search = await imageService.searchImage();
     const hits = await search.hits;
-    if(!hits){
-      loadMoreBtn.end();
-      return
-    }
-    if (hits.length === 0) {
-      Notiflix.Notify.failure(
-        'Sorry, there are no images matching your search query. Please try again.'
-      );
-      throw new Error('no data')
-    }
+    const total = await search.totalHits;
+    // const numberPage = Math.ceil(total / 40);
+    const numberPage = (imageService.page - 1) * 40;
 
-    const markupCard = await hits.reduce(
-      (markup, hit) => markup + createMarkup(hit),
-      ''
-    );
-    return updateMarkup(markupCard);
+      if(hits.length === 0){
+        Notiflix.Notify.failure(
+          'Sorry, there are no images matching your search query. Please try again.'
+        );
+        loadMoreBtn.hide();
+        return
+      } 
+
+      if (imageService.page === 2) {
+        Notiflix.Notify.success(`Hooray! We found ${total} images.`)
+      }
+  
+      const markupCard = await hits.reduce(
+          (markup, hit) => markup + createMarkup(hit),
+          ''
+        );
+  
+        loadMoreBtn.show();
+
+        if (numberPage >= total) {
+          Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
+          loadMoreBtn.hide();
+        } 
+
+        return updateMarkup(markupCard);
     
+
+    
+        
   } catch (error) {
     console.log(error);
     loadMoreBtn.hide();
   }
 }
+

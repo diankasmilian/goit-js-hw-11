@@ -1,7 +1,8 @@
 import Notiflix from 'notiflix';
-// import { searchImage } from './js/api';
 import ImageService from './js/ImageService.js';
 import LoadMoreBtn from './components/LoadMoreBtn.js';
+import SimpleLightbox from "simplelightbox";
+import "simplelightbox/dist/simple-lightbox.min.css";
 
 const refs = {
   form: document.querySelector('.search-form'),
@@ -17,8 +18,6 @@ const loadMoreBtn = new LoadMoreBtn({
 refs.form.addEventListener('submit', onSubmitForm);
 loadMoreBtn.btn.addEventListener('click', onLoadMore);
 
-console.log(loadMoreBtn.btn);
-
 async function onSubmitForm(e) {
   e.preventDefault();
   const form = e.currentTarget;
@@ -28,10 +27,9 @@ async function onSubmitForm(e) {
   else {
     imageService.searchQuery = value;
     imageService.resetPage();
-
     loadMoreBtn.show();
     clearMarkup();
-    getImage();
+    onLoadMore();
   }
 }
 
@@ -45,7 +43,8 @@ function createMarkup({
   downloads,
 }) {
   return `<div class="photo-card">
-   <img src="${webformatURL}" alt="${tags}" width='300' height='220' loading="lazy" />
+  <a class="gallery__link" href="${largeImageURL}">
+   <img src="${webformatURL}" alt="${tags}" width='300' height='220' loading="lazy" /> </a>
    <div class="info">
      <p class="info-item">
        <b>Likes</b>
@@ -67,38 +66,48 @@ function createMarkup({
  </div>`;
 }
 
+const lightbox = new SimpleLightbox('.gallery__link', { captionDelay: 250,
+   scrollZoom: false });
+
 function updateMarkup(markup) {
   refs.gallery.insertAdjacentHTML('beforeend', markup);
+  lightbox.refresh();
 }
 
 function clearMarkup() {
   refs.gallery.innerHTML = '';
 }
-function onLoadMore() {
+async function onLoadMore() {
   loadMoreBtn.disable();
+  await loadMoreBtn.enable();
 
   return getImage();
 }
 
+
 async function getImage() {
   try {
-    loadMoreBtn.disable();
-    const search = await imageService.searchImage();
+   const search = await imageService.searchImage();
     const hits = await search.hits;
-
+    if(!hits){
+      loadMoreBtn.end();
+      return
+    }
     if (hits.length === 0) {
       Notiflix.Notify.failure(
         'Sorry, there are no images matching your search query. Please try again.'
       );
+      throw new Error('no data')
     }
 
     const markupCard = await hits.reduce(
       (markup, hit) => markup + createMarkup(hit),
       ''
     );
-
     return updateMarkup(markupCard);
+    
   } catch (error) {
     console.log(error);
+    loadMoreBtn.hide();
   }
 }

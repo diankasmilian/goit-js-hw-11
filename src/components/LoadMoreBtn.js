@@ -1,3 +1,5 @@
+import Notiflix from "notiflix";
+
 export default class LoadMoreBtn {
    static classes = {
      hidden: 'hidden',
@@ -28,6 +30,6 @@ export default class LoadMoreBtn {
    end() {
     this.button.disabled = true;
     this.button.textContent = "The end!";
-  }
+    Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
  }
- 
+};

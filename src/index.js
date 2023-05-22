@@ -130,5 +130,5 @@ async function getImage() {
     console.log(error);
     loadMoreBtn.hide();
   }
-}
+};
 
